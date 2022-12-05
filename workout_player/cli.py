@@ -1,14 +1,25 @@
 """Console script for workout_player."""
 
 import csv
+import os
+from time import sleep
 from typing import List
 
 import click
-from rich.pretty import pprint
+from rich import print
+
+# from rich.pretty import pprint
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import track
+from rich.text import Text
 from workout import WorkoutSet
 
 DEFAULT_WORKOUT = "./sample_workouts/future_full_body.csv"
 DEFAULT_HEADERS = ["order", "name", "duration", "side", "description"]
+DEFAULT_SET_INTERVAL = 1
+
+console = Console()
 
 
 @click.command("play-workout")
@@ -21,7 +32,8 @@ def main(workout):
 
 def _parse_workout(workout_path: str) -> List[WorkoutSet]:
     """Parse a workout CSV file and return a list of workout sets"""
-    click.echo("_parse_workout")
+    panel = Panel(Text(f"Starting workout from {os.path.basename(workout_path)}", justify="center", style="bold cyan"))
+    print(panel)
     csv_reader = csv.reader(open(workout_path, "r"), delimiter=";")
     headers = next(csv_reader, None)
     if headers != DEFAULT_HEADERS:
@@ -33,9 +45,28 @@ def _parse_workout(workout_path: str) -> List[WorkoutSet]:
 
 def _display_workout(workout_sets: List[WorkoutSet]):
     """Render workout sets in terminal"""
-    click.echo("_display_workout")
+    # for ws_step in track(range(len(workout_sets)), description="Workout Progress... "):
+    #     ws = workout_sets[ws_step]
+    #     sleep(ws.duration)
+    total_sets = len(workout_sets)
     for ws in workout_sets:
-        pprint(ws)
+        # pprint(ws)
+        emoji = _get_emoji(ws.name)
+        progress = f"{ws.order}/{total_sets}"
+        text = Text(f"{progress} {ws.name}: {ws.description}")
+        text.stylize("bold cyan", 0, len(progress) + 1)
+        text.stylize("bold red", len(progress) + 1, len(progress) + len(ws.name) + 1)
+        console.print(text)
+        num_intervals = int(ws.duration / DEFAULT_SET_INTERVAL)
+        for _ in track(range(num_intervals), description=f"--> {emoji} "):
+            sleep(DEFAULT_SET_INTERVAL)
+
+
+def _get_emoji(name: str) -> str:
+    if name.lower() == "recover":
+        return ":palm_tree:"
+    else:
+        return ":running:"
 
 
 if __name__ == "__main__":
