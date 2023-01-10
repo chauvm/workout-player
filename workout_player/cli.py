@@ -13,6 +13,7 @@ from rich.progress import track
 from rich.prompt import IntPrompt
 from rich.text import Text
 from workout import WorkoutSet
+from utils.tts_engine import TtsEngine
 
 SAMPLE_WORKOUT_DIR = "./sample_workouts/"
 DEFAULT_WORKOUT = "./sample_workouts/future_full_body.csv"
@@ -21,9 +22,10 @@ DEFAULT_HEADERS = ["order", "name", "duration", "side", "description"]
 DEFAULT_SET_INTERVAL = 1
 DEFAULT_SWITCH_SET_ALERT = 3
 DEFAULT_SWITCH_SET_SOUND = "audio/ping.mp3"
+ENABLE_VOICE_SUPPORT = True
 
 console = Console()
-
+tts_engine = TtsEngine() if ENABLE_VOICE_SUPPORT else None
 
 @click.command("play-workout")
 @click.option("--workout", type=click.Path(), default=None, help="Path to a workout in CSV format")
@@ -83,8 +85,9 @@ def _display_workout(workout_sets: List[WorkoutSet]):
     total_sets = len(workout_sets)
     for ws in workout_sets:
         _display_set_description(ws, total_sets)
+        _inform_workset_name(ws.name)
+        _inform_workset_name(ws.description)
         _display_set_progress_bar(ws)
-
 
 def _display_set_description(ws: WorkoutSet, total_sets: int):
     # construct set progress, e.g. " 2/50"
@@ -99,7 +102,6 @@ def _display_set_description(ws: WorkoutSet, total_sets: int):
 
     console.print(text)
 
-
 def _display_set_progress_bar(ws: WorkoutSet):
     # construct set progress bar
     emoji = _get_emoji(ws.name)
@@ -110,12 +112,15 @@ def _display_set_progress_bar(ws: WorkoutSet):
         else:
             playsound.playsound(DEFAULT_SWITCH_SET_SOUND)
 
-
 def _get_emoji(name: str) -> str:
     if name.lower() == "recover":
         return ":palm_tree:"
     else:
         return ":running:"
+
+def _inform_workset_name(name: str):
+    if tts_engine and name:
+        tts_engine.say(name) 
 
 
 if __name__ == "__main__":
